@@ -17,6 +17,13 @@ class Settings:
     model_cheap: str = os.getenv("MODEL_CHEAP", os.getenv("MODEL", "gemini-3.6-flash"))
     model_strong: str = os.getenv("MODEL_STRONG", "gemini-3.6-pro")
 
+    # Google OAuth
+    google_client_id: str = os.getenv(
+        "GOOGLE_CLIENT_ID",
+        "374080008653-c6a7ml4vgq9r22atrkvnugniff1k4r0s.apps.googleusercontent.com",
+    )
+    google_client_secret: str = os.getenv("GOOGLE_CLIENT_SECRET", "")
+
     # Limits
     max_raw_items: int = int(os.getenv("MAX_RAW_ITEMS", "100"))
     max_clean_clusters: int = int(os.getenv("MAX_CLEAN_CLUSTERS", "30"))

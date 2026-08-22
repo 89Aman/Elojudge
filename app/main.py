@@ -128,6 +128,7 @@ app.add_middleware(
 ERROR_PAGE_TEMPLATE = """<!DOCTYPE html>
 <html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>{title} — EloJudge</title>
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
 <style>
 *{{box-sizing:border-box}}body{{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;
@@ -183,6 +184,15 @@ async def server_error_handler(request: Request, exc: Any) -> HTMLResponse:
 static_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "static")
 if os.path.isdir(static_dir):
     app.mount("/static", StaticFiles(directory=static_dir), name="static")
+
+
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon():
+    """Serve favicon directly for browser standard requests."""
+    icon_file = os.path.join(static_dir, "favicon.svg")
+    if os.path.exists(icon_file):
+        return FileResponse(icon_file, media_type="image/svg+xml")
+    raise HTTPException(status_code=404, detail="Favicon not found")
 
 
 @app.get("/", summary="Web Application Entrypoint", include_in_schema=False)
@@ -253,6 +263,7 @@ async def auth_status(request: Request, google_id_token: str = ""):
         "remaining_runs": remaining,
         "max_runs": 5 if is_google else 0,
         "login_required": not is_google and not bool(request.headers.get("x-gemini-api-key")),
+        "google_client_id": settings.google_client_id,
     }
 
 

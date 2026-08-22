@@ -1137,23 +1137,27 @@ async function refreshAuthStatus() {
     runsIndicator.textContent = '🔒 Sign in with Google';
     runsIndicator.classList.remove('exhausted');
     runsIndicator.title = 'Sign in with Google to get 5 free runs per day, or add your Gemini key.';
-    return;
   }
 
   try {
-    const url = `/auth/status?google_id_token=${encodeURIComponent(token)}`;
+    const url = token ? `/auth/status?google_id_token=${encodeURIComponent(token)}` : '/auth/status';
     const res = await fetch(url);
     if (res.ok) {
       const data = await res.json();
-      const rem = data.remaining_runs ?? 5;
-      const max = data.max_runs ?? 5;
-      runsIndicator.textContent = `⚡ ${rem}/${max} free runs`;
-      runsIndicator.classList.toggle('exhausted', rem === 0);
-      runsIndicator.title = `${rem} free server runs remaining today. Add a custom key for unlimited runs.`;
-      
-      if (data.user && !getGoogleUser()) {
-        localStorage.setItem(STORAGE_KEY_GOOGLE_USER, JSON.stringify(data.user));
-        updateAuthUI();
+      if (data.google_client_id && data.google_client_id !== activeGoogleClientId) {
+        initGoogleAuth(data.google_client_id);
+      }
+      if (token) {
+        const rem = data.remaining_runs ?? 5;
+        const max = data.max_runs ?? 5;
+        runsIndicator.textContent = `⚡ ${rem}/${max} free runs`;
+        runsIndicator.classList.toggle('exhausted', rem === 0);
+        runsIndicator.title = `${rem} free server runs remaining today. Add a custom key for unlimited runs.`;
+        
+        if (data.user && !getGoogleUser()) {
+          localStorage.setItem(STORAGE_KEY_GOOGLE_USER, JSON.stringify(data.user));
+          updateAuthUI();
+        }
       }
     }
   } catch (err) {
@@ -1266,12 +1270,16 @@ window.handleGoogleCredentialResponse = function(response) {
   }
 };
 
+const GOOGLE_CLIENT_ID_DEFAULT = '374080008653-c6a7ml4vgq9r22atrkvnugniff1k4r0s.apps.googleusercontent.com';
+let activeGoogleClientId = GOOGLE_CLIENT_ID_DEFAULT;
+
 // Initialize Google GIS button if available
-function initGoogleAuth() {
+function initGoogleAuth(clientId = activeGoogleClientId) {
   if (window.google && window.google.accounts && window.google.accounts.id) {
     try {
+      activeGoogleClientId = clientId || GOOGLE_CLIENT_ID_DEFAULT;
       window.google.accounts.id.initialize({
-        client_id: '108139589414-sample.apps.googleusercontent.com', // Placeholder / generic OAuth client
+        client_id: activeGoogleClientId,
         callback: window.handleGoogleCredentialResponse,
         auto_select: false,
         cancel_on_tap_outside: true,

@@ -9,6 +9,8 @@ from typing import Optional
 
 import httpx
 
+from app.config import settings
+
 logger = logging.getLogger(__name__)
 
 # Daily run limits when using server key
@@ -104,6 +106,10 @@ async def verify_google_id_token(token: str) -> Optional[dict]:
             if resp.status_code == 200:
                 data = resp.json()
                 if "email" in data:
+                    aud = data.get("aud", "")
+                    if settings.google_client_id and aud and aud != settings.google_client_id:
+                        logger.warning("Google token aud mismatch: expected %s, got %s", settings.google_client_id, aud)
+                        return None
                     return {
                         "email": data.get("email"),
                         "name": data.get("name", data.get("email")),
