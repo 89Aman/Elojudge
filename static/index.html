@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EloJudge — Turn messy feedback into a prioritized, explainable backlog</title>
+  <meta name="description" content="EloJudge cleans feedback locally, compares the strongest requests head-to-head against a custom product rubric, and ranks them with Elo — every decision ships with auditable reasons.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/styles.css">
+  <!-- Google Identity Services -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body>
+  <div class="glow-bg" aria-hidden="true"></div>
+
+  <main class="app">
+
+    <!-- ============ Screen 1: Input ============ -->
+    <section id="screen-input" class="screen" aria-labelledby="input-heading">
+      <header class="app-header">
+        <div class="header-top">
+          <div class="logo">
+            <span class="logo-mark">⚖️</span>
+            <span>Elo<span class="logo-accent">Judge</span></span>
+          </div>
+
+          <!-- Auth & Key Bar -->
+          <div class="header-auth-bar">
+            <span class="pill-tag pill-tag-runs" id="runs-indicator" title="Daily free AI ranking runs">⚡ 2 free runs</span>
+            
+            <button type="button" class="btn-pill-action" id="open-key-modal-btn" title="Add your own Gemini API Key for unlimited runs">
+              <span class="key-icon">🔑</span>
+              <span id="key-btn-text">Gemini Key</span>
+              <span class="key-status-dot" id="key-status-dot"></span>
+            </button>
+
+            <div id="google-auth-container" class="google-auth-wrap">
+              <div id="g-sign-in-btn"></div>
+              <div id="user-profile-chip" class="user-profile-chip" hidden>
+                <img id="user-avatar" class="user-avatar" src="" alt="Avatar" width="24" height="24">
+                <span id="user-name" class="user-name">User</span>
+                <button type="button" id="sign-out-btn" class="sign-out-btn" title="Sign out">✕</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="hero">
+          <p class="hero-kicker">Feedback prioritization · with receipts</p>
+          <h1 id="input-heading">
+            Turn messy feedback into a <span class="grad-text">prioritized, explainable</span> backlog
+          </h1>
+          <p class="lede">
+            EloJudge cleans feedback locally, compares the strongest requests head-to-head against a
+            custom product rubric, and ranks them with Elo — every single decision comes with
+            auditable reasons and proof-of-computation.
+          </p>
+        </div>
+      </header>
+
+      <form id="rank-form" novalidate>
+        <div class="card-glass field-card">
+          <div class="field">
+            <div class="field-header">
+              <label for="product-context">Product context &amp; goals</label>
+              <span class="counter" id="context-counter">0 / 20 min</span>
+            </div>
+            <textarea
+              id="product-context"
+              rows="3"
+              placeholder="What is your product, who is it for, and what are its primary quarterly goals or constraints?"
+            ></textarea>
+            <div class="field-meta">
+              <span class="helper">At least 20 characters — specific goals, target users, and constraints make judgments sharper.</span>
+            </div>
+            <p class="field-error" id="context-error" role="alert" hidden></p>
+          </div>
+
+          <div class="field field-bottom">
+            <div class="field-header">
+              <label for="feedback-items">Feedback items <span class="label-note">· one item per line</span></label>
+              <span class="counter" id="items-counter">0 / 20 items</span>
+            </div>
+            <textarea
+              id="feedback-items"
+              class="mono-input"
+              rows="8"
+              placeholder="Add dark mode&#10;Export notes to PDF&#10;Better search with filters&#10;Sync notes across mobile and desktop"
+            ></textarea>
+            <div class="field-meta">
+              <span class="helper">Up to 20 items. Junk, spam, and near-duplicates are cleaned locally before anything hits an API.</span>
+            </div>
+            <p class="field-error" id="items-error" role="alert" hidden></p>
+          </div>
+        </div>
+
+        <p class="field-error form-error" id="form-error" role="alert" hidden></p>
+
+        <div class="actions">
+          <button type="submit" id="submit-btn" class="btn btn-primary">
+            <span class="btn-icon">⚡</span>
+            <span>Prioritize feedback</span>
+          </button>
+          <button type="button" id="upload-csv" class="btn btn-secondary">
+            <span class="btn-icon">📂</span>
+            <span>Upload CSV / JSON</span>
+          </button>
+          <button type="button" id="clear-btn" class="btn btn-ghost" title="Clear inputs">Clear</button>
+          <span class="kbd-hint"><kbd>Ctrl</kbd> + <kbd>Enter</kbd> to run</span>
+        </div>
+
+        <!-- Upload Modal Dialog -->
+        <dialog id="upload-dialog" class="upload-dialog">
+          <div class="dialog-header">
+            <h3>Import Dataset</h3>
+            <button type="button" id="dialog-close" class="dialog-close-btn" aria-label="Close">✕</button>
+          </div>
+          <div id="drop-zone" class="drop-zone">
+            <div class="drop-zone-content">
+              <span class="drop-icon">📁</span>
+              <p class="drop-text">Drag & drop your file here</p>
+              <p class="drop-hint">or</p>
+              <button type="button" id="browse-btn" class="btn btn-secondary btn-sm">Browse Files</button>
+              <p class="drop-formats">Supports .csv, .json, and .txt</p>
+            </div>
+          </div>
+          <div class="upload-progress-wrap" id="upload-progress-wrap" hidden>
+            <div class="upload-progress-bar">
+              <div class="upload-progress-fill" id="upload-progress-fill"></div>
+            </div>
+            <span class="upload-progress-text" id="upload-progress-text">Reading file…</span>
+          </div>
+          <input type="file" id="csv-input" accept=".csv,.json,text/csv,application/json,text/plain" hidden>
+        </dialog>
+
+        <!-- Gemini API Key Dialog (BYOK) -->
+        <dialog id="api-key-dialog" class="upload-dialog key-dialog">
+          <div class="dialog-header">
+            <h3>🔑 Gemini API Key (BYOK)</h3>
+            <button type="button" id="key-dialog-close" class="dialog-close-btn" aria-label="Close">✕</button>
+          </div>
+          <div class="key-dialog-body">
+            <p class="key-dialog-desc">
+              Bring your own Gemini API key for <strong>unlimited free runs</strong> without hitting server quotas.
+            </p>
+            <div class="key-input-wrap">
+              <label for="custom-gemini-key">Your Gemini API Key</label>
+              <div class="key-input-row">
+                <input
+                  type="password"
+                  id="custom-gemini-key"
+                  class="key-input mono-input"
+                  placeholder="AIzaSy..."
+                  autocomplete="off"
+                  spellcheck="false"
+                >
+                <button type="button" id="toggle-key-visibility" class="btn btn-ghost btn-sm" title="Toggle visibility">👁️</button>
+              </div>
+              <span class="key-help">
+                Get a free key from <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer">Google AI Studio ↗</a>.
+                Key is stored only in your local browser storage.
+              </span>
+            </div>
+            <div class="key-dialog-actions">
+              <button type="button" id="save-key-btn" class="btn btn-primary">Save Key</button>
+              <button type="button" id="clear-key-btn" class="btn btn-ghost" hidden>Remove Key</button>
+              <button type="button" id="cancel-key-btn" class="btn btn-secondary">Cancel</button>
+            </div>
+          </div>
+        </dialog>
+
+        <!-- API Error Warning Banner -->
+        <div class="warning-banner" id="api-warning" hidden>
+          <span class="warning-icon">⚠️</span>
+          <div class="warning-content">
+            <strong id="warning-title">Connection Error</strong>
+            <p id="warning-message">Unable to reach the server. Make sure the backend is running.</p>
+          </div>
+          <button type="button" id="warning-dismiss" class="warning-dismiss" aria-label="Dismiss">✕</button>
+        </div>
+
+        <!-- Success Notification (only shown on successful dataset upload) -->
+        <div class="notification-box" id="upload-note" hidden>
+          <span class="notif-icon">✅</span>
+          <span id="upload-note-text">Dataset loaded — edit freely, then click Prioritize feedback.</span>
+        </div>
+      </form>
+    </section>
+
+    <!-- ============ Screen 2: Processing ============ -->
+    <section id="screen-processing" class="screen" hidden aria-labelledby="processing-heading">
+      <div class="processing-container card-glass">
+        <div class="processing-header">
+          <div class="spinner-large"></div>
+          <h2 id="processing-heading">Ranking your feedback…</h2>
+          <p class="processing-sub">Most of this runs locally — only rubric creation and head-to-head judgments call the model.</p>
+        </div>
+
+        <div class="progress-bar-wrap">
+          <div class="progress-bar-fill" id="progress-bar-fill"></div>
+        </div>
+
+        <ol class="steps" id="step-list" aria-live="polite"></ol>
+
+        <div class="processing-footer">
+          <span class="live-pulse"></span>
+          <span id="processing-live-status">Executing pipeline stage 1 of 6</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ Screen 3: Results ============ -->
+    <section id="screen-results" class="screen" hidden aria-labelledby="results-heading">
+      <div id="result-banner" class="banner" hidden></div>
+
+      <header class="results-header">
+        <div>
+          <h2 id="results-heading">Your prioritized backlog</h2>
+          <p class="results-sub">Ranked via Swiss head-to-head tournament against your product rubric.</p>
+        </div>
+        <div class="results-top-actions">
+          <button type="button" id="copy-backlog-btn" class="btn btn-secondary btn-sm" title="Copy Markdown backlog">⧉ Copy Backlog</button>
+          <button type="button" id="top-run-again-btn" class="btn btn-primary btn-sm">↻ Run Again</button>
+        </div>
+      </header>
+
+      <!-- Metrics bar -->
+      <div class="metrics-container" id="metrics-bar" role="list"></div>
+
+      <!-- Tier filters -->
+      <div class="tier-nav" id="tier-nav" role="tablist">
+        <button type="button" class="tier-tab active" data-filter="all">All Items <span class="tab-count" id="count-all">0</span></button>
+        <button type="button" class="tier-tab" data-filter="now">Now <span class="tab-count" id="count-now">0</span></button>
+        <button type="button" class="tier-tab" data-filter="next">Next <span class="tab-count" id="count-next">0</span></button>
+        <button type="button" class="tier-tab" data-filter="later">Later <span class="tab-count" id="count-later">0</span></button>
+      </div>
+
+      <!-- Tiered ranked cards -->
+      <div id="tiers"></div>
+
+      <!-- Collapsible panels -->
+      <div class="panels-grid">
+        <details class="panel card-glass" id="cleaning-panel">
+          <summary>
+            <span class="panel-title-wrap">
+              <span class="panel-icon">🧹</span>
+              <span class="panel-title">Cleaning Summary</span>
+            </span>
+            <span class="panel-hint">what was filtered or merged locally before API calls</span>
+          </summary>
+          <div class="panel-body" id="cleaning-body"></div>
+        </details>
+
+        <details class="panel card-glass" id="rubric-panel">
+          <summary>
+            <span class="panel-title-wrap">
+              <span class="panel-icon">📐</span>
+              <span class="panel-title">Product Rubric</span>
+            </span>
+            <span class="panel-hint">weighted dimensions scored in head-to-head comparisons</span>
+          </summary>
+          <div class="panel-body" id="rubric-body"></div>
+        </details>
+      </div>
+
+      <!-- Lower-priority candidates -->
+      <section class="lower-priority card-glass" id="lower-priority" hidden>
+        <div class="lower-header">
+          <h3>
+            <span>📦 Lower-Priority Candidates</span>
+            <span class="not-compared">— not fully compared</span>
+          </h3>
+          <span class="lower-badge">Surviving Local Pre-Rank</span>
+        </div>
+        <p class="section-sub">
+          These items survived cleaning but didn’t enter the top-8 Swiss tournament.
+          They are ordered by local pre-rank score only.
+        </p>
+        <ul id="lower-list" class="lower-list"></ul>
+      </section>
+
+      <!-- Bottom action bar -->
+      <div class="actions results-actions">
+        <button type="button" id="run-again" class="btn btn-primary">
+          <span class="btn-icon">↻</span>
+          <span>Run again — preserve inputs</span>
+        </button>
+        <button type="button" id="return-home" class="btn btn-secondary">Return to home</button>
+        <button type="button" id="export-csv-btn" class="btn btn-ghost">Export CSV</button>
+      </div>
+    </section>
+
+  </main>
+
+  <div id="toast" class="toast" role="alert" aria-live="assertive" hidden></div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
