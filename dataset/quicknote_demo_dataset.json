@@ -1,0 +1,223 @@
+{
+  "app": "QuickNote",
+  "version": "1.0",
+  "description": "Seed dataset for testing and demonstrating note-taking, search, filtering, tagging, pinning, archiving, and reminders.",
+  "generated_for": "demo",
+  "users": [
+    {
+      "id": "usr_001",
+      "name": "Aarav Sharma",
+      "email": "aarav.sharma@example.com",
+      "created_at": "2026-01-15T09:30:00+05:30",
+      "preferences": {
+        "theme": "system",
+        "default_view": "grid",
+        "notifications": true
+      }
+    },
+    {
+      "id": "usr_002",
+      "name": "Meera Patel",
+      "email": "meera.patel@example.com",
+      "created_at": "2026-02-02T14:10:00+05:30",
+      "preferences": {
+        "theme": "dark",
+        "default_view": "list",
+        "notifications": false
+      }
+    }
+  ],
+  "tags": [
+    { "id": "tag_001", "name": "work", "color": "#2563EB" },
+    { "id": "tag_002", "name": "study", "color": "#7C3AED" },
+    { "id": "tag_003", "name": "ideas", "color": "#EA580C" },
+    { "id": "tag_004", "name": "personal", "color": "#059669" },
+    { "id": "tag_005", "name": "important", "color": "#DC2626" },
+    { "id": "tag_006", "name": "shopping", "color": "#CA8A04" }
+  ],
+  "notes": [
+    {
+      "id": "note_001",
+      "user_id": "usr_001",
+      "title": "QuickNote MVP checklist",
+      "content": "Implement note creation, editing, deletion, search, tags, pinning, archive, and responsive layout. Add empty states and loading indicators before the demo.",
+      "content_format": "plain_text",
+      "tags": ["tag_001", "tag_005"],
+      "is_pinned": true,
+      "is_archived": false,
+      "is_deleted": false,
+      "color": "yellow",
+      "reminder_at": "2026-08-25T10:00:00+05:30",
+      "created_at": "2026-08-18T11:20:00+05:30",
+      "updated_at": "2026-08-21T18:45:00+05:30"
+    },
+    {
+      "id": "note_002",
+      "user_id": "usr_001",
+      "title": "Database revision topics",
+      "content": "Revise normalization, functional dependencies, ER diagrams, indexing, transactions, ACID properties, serializability, and SQL joins.",
+      "content_format": "plain_text",
+      "tags": ["tag_002"],
+      "is_pinned": false,
+      "is_archived": false,
+      "is_deleted": false,
+      "color": "purple",
+      "reminder_at": "2026-08-27T19:00:00+05:30",
+      "created_at": "2026-08-16T20:05:00+05:30",
+      "updated_at": "2026-08-20T09:12:00+05:30"
+    },
+    {
+      "id": "note_003",
+      "user_id": "usr_001",
+      "title": "AI assistant ideas",
+      "content": "A local-first writing assistant that summarizes notes, extracts tasks, suggests tags, and answers questions using only the user's selected notes.",
+      "content_format": "markdown",
+      "tags": ["tag_003", "tag_001"],
+      "is_pinned": true,
+      "is_archived": false,
+      "is_deleted": false,
+      "color": "orange",
+      "reminder_at": null,
+      "created_at": "2026-08-14T23:40:00+05:30",
+      "updated_at": "2026-08-19T00:15:00+05:30"
+    },
+    {
+      "id": "note_004",
+      "user_id": "usr_001",
+      "title": "Groceries for weekend",
+      "content": "Milk, oats, bananas, vegetables, coffee, dishwashing liquid, and notebook refills.",
+      "content_format": "plain_text",
+      "tags": ["tag_004", "tag_006"],
+      "is_pinned": false,
+      "is_archived": false,
+      "is_deleted": false,
+      "color": "green",
+      "reminder_at": "2026-08-23T09:30:00+05:30",
+      "created_at": "2026-08-22T08:10:00+05:30",
+      "updated_at": "2026-08-22T08:10:00+05:30"
+    },
+    {
+      "id": "note_005",
+      "user_id": "usr_001",
+      "title": "Internship application follow-up",
+      "content": "Send a follow-up email with the updated resume and GitHub portfolio. Mention the FastAPI project and cloud deployment experience.",
+      "content_format": "plain_text",
+      "tags": ["tag_001", "tag_005"],
+      "is_pinned": false,
+      "is_archived": false,
+      "is_deleted": false,
+      "color": "red",
+      "reminder_at": "2026-08-24T11:00:00+05:30",
+      "created_at": "2026-08-21T16:25:00+05:30",
+      "updated_at": "2026-08-21T16:25:00+05:30"
+    },
+    {
+      "id": "note_006",
+      "user_id": "usr_001",
+      "title": "Weekend reading list",
+      "content": "Read about event-driven architecture, vector databases, retrieval-augmented generation, and Kubernetes health probes.",
+      "content_format": "plain_text",
+      "tags": ["tag_001", "tag_002"],
+      "is_pinned": false,
+      "is_archived": true,
+      "is_deleted": false,
+      "color": "blue",
+      "reminder_at": null,
+      "created_at": "2026-08-01T12:00:00+05:30",
+      "updated_at": "2026-08-10T15:30:00+05:30"
+    },
+    {
+      "id": "note_007",
+      "user_id": "usr_001",
+      "title": "Old API experiment",
+      "content": "Tested three response formats for the prototype. Keep the JSON schema versioned if this experiment is revisited.",
+      "content_format": "plain_text",
+      "tags": ["tag_003"],
+      "is_pinned": false,
+      "is_archived": false,
+      "is_deleted": true,
+      "deleted_at": "2026-08-12T10:20:00+05:30",
+      "color": "gray",
+      "reminder_at": null,
+      "created_at": "2026-07-20T10:00:00+05:30",
+      "updated_at": "2026-08-12T10:20:00+05:30"
+    },
+    {
+      "id": "note_008",
+      "user_id": "usr_002",
+      "title": "Trip planning — Jaipur",
+      "content": "Compare train and flight prices, shortlist hotels near the old city, and prepare a two-day food and sightseeing itinerary.",
+      "content_format": "plain_text",
+      "tags": ["tag_004", "tag_003"],
+      "is_pinned": true,
+      "is_archived": false,
+      "is_deleted": false,
+      "color": "pink",
+      "reminder_at": "2026-09-01T17:30:00+05:30",
+      "created_at": "2026-08-17T13:15:00+05:30",
+      "updated_at": "2026-08-22T12:05:00+05:30"
+    },
+    {
+      "id": "note_009",
+      "user_id": "usr_002",
+      "title": "Meeting notes — product sync",
+      "content": "The team agreed to prioritize offline support, keyboard shortcuts, and conflict resolution. Design review is scheduled for Thursday.",
+      "content_format": "plain_text",
+      "tags": ["tag_001", "tag_005"],
+      "is_pinned": false,
+      "is_archived": false,
+      "is_deleted": false,
+      "color": "yellow",
+      "reminder_at": "2026-08-27T15:00:00+05:30",
+      "created_at": "2026-08-20T15:45:00+05:30",
+      "updated_at": "2026-08-20T17:00:00+05:30"
+    },
+    {
+      "id": "note_010",
+      "user_id": "usr_002",
+      "title": "Books to borrow",
+      "content": "Designing Data-Intensive Applications, Clean Architecture, and The Pragmatic Programmer.",
+      "content_format": "plain_text",
+      "tags": ["tag_004"],
+      "is_pinned": false,
+      "is_archived": false,
+      "is_deleted": false,
+      "color": "blue",
+      "reminder_at": null,
+      "created_at": "2026-08-11T18:30:00+05:30",
+      "updated_at": "2026-08-11T18:30:00+05:30"
+    }
+  ],
+  "demo_scenarios": [
+    {
+      "id": "scenario_001",
+      "name": "Search notes",
+      "action": "Search for 'API'",
+      "expected_note_ids": ["note_001", "note_007"]
+    },
+    {
+      "id": "scenario_002",
+      "name": "Filter by tag",
+      "action": "Filter by 'study'",
+      "expected_note_ids": ["note_002", "note_006"]
+    },
+    {
+      "id": "scenario_003",
+      "name": "Pinned notes",
+      "action": "Open the pinned view as usr_001",
+      "expected_note_ids": ["note_001", "note_003"]
+    },
+    {
+      "id": "scenario_004",
+      "name": "Archive and restore",
+      "action": "Open archived notes and restore note_006",
+      "expected_note_ids": ["note_006"]
+    },
+    {
+      "id": "scenario_005",
+      "name": "Reminder display",
+      "action": "Show notes with reminders before 2026-08-26",
+      "expected_note_ids": ["note_001", "note_004", "note_005"]
+    }
+  ]
+}
