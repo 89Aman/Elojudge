@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import logging
 import os
+import time
 from contextlib import asynccontextmanager
 from typing import Any
 
@@ -62,18 +63,54 @@ logging.basicConfig(
 logger = logging.getLogger("elojudge")
 
 
-# ── Application Lifespan ─────────────────────────────────────────────────────
+# ── Application Lifespan & Service Health Checks ─────────────────────────────
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Application startup and shutdown event management."""
-    logger.info("⚡ EloJudge backend starting up...")
-    logger.info("🤖 Default Model: %s | Strong Model: %s", settings.model, settings.model_strong)
-    logger.info("🔑 Server API Key configured: %s", bool(settings.api_key))
+    """Application startup and shutdown event management with multi-service diagnostics."""
+    logger.info("=" * 72)
+    logger.info("⚡ ELOJUDGE BACKEND INITIALIZATION & SERVICE HEALTH DIAGNOSTICS")
+    logger.info("=" * 72)
+
+    # 1. AI/LLM Service Check
+    if settings.api_key:
+        logger.info(
+            "🤖 [Service: AI Engine] READY | Fast: %s | Strong: %s | Key: Configured",
+            settings.model_cheap,
+            settings.model_strong,
+        )
+    else:
+        logger.warning(
+            "⚠️ [Service: AI Engine] NO SERVER KEY | Fast: %s | Strong: %s | (Users must provide BYOK key)",
+            settings.model_cheap,
+            settings.model_strong,
+        )
+
+    # 2. Database Service Check
+    if settings.database_url:
+        logger.info("🗄️ [Service: Database] DigitalOcean PostgreSQL target configured: %s...", settings.database_url[:32])
+    else:
+        logger.info("ℹ️ [Service: Database] In-memory standalone mode (DATABASE_URL not set)")
     await init_db()
+
+    # 3. Auth & Rate Limiter Service Check
+    if settings.google_client_id:
+        logger.info("🔑 [Service: Google Auth] OAuth Client ID configured (%s...)", settings.google_client_id[:16])
+    else:
+        logger.info("ℹ️ [Service: Google Auth] Google OAuth not configured")
+    logger.info("🛡️ [Service: Rate Limiter] Active (5 free daily runs/user, BYOK unlimited)")
+
+    # 4. Static Frontend Assets Check
+    static_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "static")
+    index_exists = os.path.exists(os.path.join(static_path, "index.html"))
+    logger.info("🎨 [Service: Frontend UI] Static Dark Arena Assets: %s (path=%s)", "LOADED" if index_exists else "MISSING", static_path)
+    logger.info("=" * 72)
+
     yield
-    await close_db()
+
     logger.info("🛑 EloJudge backend shutting down...")
+    await close_db()
+    logger.info("✅ All services stopped cleanly.")
 
 
 # ── OpenAPI Metadata ─────────────────────────────────────────────────────────
@@ -133,6 +170,27 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    """HTTP request diagnostic logging middleware."""
+    start_time = time.time()
+    path = request.url.path
+    method = request.method
+    client_ip = request.headers.get("x-forwarded-for", request.client.host if request.client else "127.0.0.1")
+
+    try:
+        response = await call_next(request)
+        duration_ms = (time.time() - start_time) * 1000.0
+        # Don't flood logs with static asset queries unless error
+        if not path.startswith("/static/") or response.status_code >= 400:
+            logger.info("📡 [%s] %s -> %d (%.1fms) [client=%s]", method, path, response.status_code, duration_ms, client_ip)
+        return response
+    except Exception as exc:
+        duration_ms = (time.time() - start_time) * 1000.0
+        logger.error("💥 [%s] %s -> 500 Server Error (%.1fms): %s", method, path, duration_ms, exc)
+        raise exc
 
 
 # ── Custom Error Page Templates ──────────────────────────────────────────────
@@ -361,6 +419,12 @@ async def rank_feedback(request: RankRequest, raw_request: Request):
         near_duplicate_threshold=settings.near_duplicate_threshold,
         max_clusters=settings.max_clean_clusters,
     )
+    logger.info(
+        "🧹 [Stage 1/8: Cleaner] Raw items: %d -> Clean clusters: %d (Noise/Spam removed: %d)",
+        len(request.feedback_items),
+        len(cleaning_result.clusters),
+        cleaning_result.summary.noise_items,
+    )
 
     if len(cleaning_result.clusters) < 2:
         raise HTTPException(
@@ -375,6 +439,12 @@ async def rank_feedback(request: RankRequest, raw_request: Request):
         tracker=tracker,
         api_key=active_api_key,
     )
+    logger.info(
+        "📐 [Stage 2/8: Rubric] Active criteria: %d dimensions (%s) [Fallback: %s]",
+        len(rubric.dimensions),
+        ", ".join(d.name for d in rubric.dimensions),
+        is_fallback_rubric,
+    )
 
     # ── Step 3: Local Pre-Ranking & Candidate Selection ──────────────────────
     max_cand = min(request.max_candidates, settings.max_tournament_items)
@@ -382,6 +452,11 @@ async def rank_feedback(request: RankRequest, raw_request: Request):
         cleaning_result.clusters,
         request.product_context,
         max_candidates=max_cand,
+    )
+    logger.info(
+        "📊 [Stage 3/8: Pre-Ranking] Contenders selected: %d for Swiss tournament (Lower-priority: %d)",
+        len(tournament_clusters),
+        len(lower_clusters),
     )
 
     # ── Step 4: Tournament State Initialization ──────────────────────────────
@@ -396,6 +471,8 @@ async def rank_feedback(request: RankRequest, raw_request: Request):
     previous_top_ids: list[str] = []
     rounds_completed = 0
 
+    logger.info("⚔️ [Stage 4/8: Tournament] Commencing Swiss pairing (%d rounds planned, %d candidates)", max_rounds, len(candidates))
+
     for round_num in range(1, max_rounds + 1):
         rounds_completed = round_num
 
@@ -406,7 +483,7 @@ async def rank_feedback(request: RankRequest, raw_request: Request):
         if stopped:
             early_stopped = True
             early_stop_reason = reason
-            logger.info("⏱️ Early stopping triggered at round %d: %s", round_num, reason)
+            logger.info("⏱️ [Stage 4/8: Tournament] Early stopping triggered at round %d: %s", round_num, reason)
             break
 
         pairings = generate_pairings(candidates, round_num)
@@ -432,6 +509,8 @@ async def rank_feedback(request: RankRequest, raw_request: Request):
         for match in matches:
             apply_match_result(candidates, match)
             all_matches.append(match)
+
+        logger.info("⚔️ [Stage 4/8: Tournament] Round %d/%d completed: %d matches recorded", round_num, max_rounds, len(matches))
 
         # Track top candidates for stability convergence check
         previous_top_ids = [c.id for c in rank_candidates(candidates)[:3]]
@@ -490,6 +569,13 @@ async def rank_feedback(request: RankRequest, raw_request: Request):
         for cluster in lower_clusters
     ]
 
+    tier_counts = {
+        "Now": sum(1 for item in ranked_items if item.tier == "Now"),
+        "Next": sum(1 for item in ranked_items if item.tier == "Next"),
+        "Later": len(lower_priority) + sum(1 for item in ranked_items if item.tier == "Later"),
+    }
+    logger.info("🏆 [Stage 5/8: Elo & Tiers] Ratings finalized: Now: %d, Next: %d, Later: %d", tier_counts["Now"], tier_counts["Next"], tier_counts["Later"])
+
     # ── Step 8: Build Telemetry & Response ───────────────────────────────────
     summary = PipelineSummary(
         raw_items=len(request.feedback_items),
@@ -535,10 +621,10 @@ async def rank_feedback(request: RankRequest, raw_request: Request):
     )
 
     logger.info(
-        "✅ Pipeline finished [%s]: %d ranked items, %d pairwise matches, est_cost=$%.5f",
+        "💾 [Stage 6/8: Persistence] Job %s saved to DB | Tokens: %d In / %d Out | Cost: $%.5f",
         job_id,
-        len(ranked_items),
-        len(all_matches),
+        budget.used_input_tokens,
+        budget.used_output_tokens,
         budget.estimated_cost,
     )
 

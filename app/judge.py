@@ -129,11 +129,12 @@ async def call_llm(
         latency_ms = (time.time() - t0) * 1000.0
         raw_text = response.text.strip()
         output_tokens = estimate_tokens(raw_text)
+        logger.info("🤖 [AI Judge] Model: %s | Latency: %.1fms | In: %d tok | Out: %d tok", model, latency_ms, input_tokens, output_tokens)
         return raw_text, input_tokens, output_tokens, latency_ms
 
     except Exception as e:
         latency_ms = (time.time() - t0) * 1000.0
-        logger.warning("LLM call failed (%s)", e)
+        logger.warning("⚠️ [AI Judge] Model invocation failed (%s) in %.1fms (fallback will engage)", e, latency_ms)
         return None, input_tokens, 0, latency_ms
 
 

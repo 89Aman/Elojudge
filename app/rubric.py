@@ -99,14 +99,14 @@ async def generate_rubric(
     # 1. Exact Cache Check
     cached = cache_layer.get_rubric(product_context)
     if cached:
-        logger.info("Rubric exact cache hit")
+        logger.info("📐 [Rubric Service] Exact cache hit for context (%d dimensions)", len(cached.dimensions))
         if tracker:
             tracker.record_request("generate_rubric", "cache", 0, 0, 0.0, cache_hit=True)
         return cached, False
 
     # 2. Budget Check
     if not budget.can_make_request():
-        logger.warning("Budget exhausted, using default rubric")
+        logger.warning("⚠️ [Rubric Service] Budget exhausted, using default rubric")
         if tracker:
             tracker.record_request("generate_rubric", "fallback", 0, 0, 0.0, fallback=True)
         return DEFAULT_RUBRIC, True
@@ -120,7 +120,7 @@ async def generate_rubric(
 
     try:
         if not active_key:
-            logger.warning("No API key configured, using default rubric")
+            logger.warning("⚠️ [Rubric Service] No API key configured, using default rubric")
             return DEFAULT_RUBRIC, True
 
         client = genai.Client(api_key=active_key)
@@ -151,14 +151,21 @@ async def generate_rubric(
 
         if rubric:
             cache_layer.set_rubric(product_context, rubric)
+            logger.info(
+                "📐 [Rubric Service] Synthesized %d criteria (%s) in %.1fms via %s",
+                len(rubric.dimensions),
+                ", ".join(d.name for d in rubric.dimensions),
+                latency_ms,
+                model,
+            )
             return rubric, False
 
-        logger.warning("Generated rubric failed validation, using default")
+        logger.warning("⚠️ [Rubric Service] Generated rubric failed validation, using default")
         return DEFAULT_RUBRIC, True
 
     except Exception as e:
         latency_ms = (time.time() - t0) * 1000.0
-        logger.warning("Rubric generation failed (%s), using default", e)
+        logger.warning("⚠️ [Rubric Service] Rubric generation failed (%s) in %.1fms, using default", e, latency_ms)
         if tracker:
             tracker.record_request("generate_rubric", model, input_tokens, 0, latency_ms, fallback=True)
         return DEFAULT_RUBRIC, True
