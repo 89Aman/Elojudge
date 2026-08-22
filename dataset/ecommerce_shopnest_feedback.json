@@ -1,0 +1,24 @@
+{
+  "app": "ShopNest",
+  "product_context": "ShopNest is a direct-to-consumer mobile e-commerce brand for sustainable fashion. Target audience: Gen-Z and millennial shoppers on iOS and Android. Quarterly goals: reduce cart abandonment rate below 25%, boost repeat purchase rate, and speed up mobile checkout.",
+  "feedback": [
+    "App crashes immediately on checkout when Apple Pay is selected on iOS 18",
+    "Allow 1-click guest checkout without forcing account registration",
+    "Fast guest checkout option without creating a password",
+    "Show real-time courier tracking map with SMS delivery updates",
+    "Add UPI and Google Pay express payment methods at checkout",
+    "Include UPI payment QR option on the checkout page",
+    "Size recommendation guide based on height, weight, and previous brand purchases",
+    "Notify me via push notification when sold-out items in my wishlist are restocked",
+    "Wishlist back-in-stock alerts when sizes become available again",
+    "Allow split payments across two credit cards or card + gift card",
+    "Customer photo and video reviews on product detail pages",
+    "Instant returns label generation directly from order history page",
+    "Apply discount codes automatically from available coupons banner",
+    "Show estimated carbon footprint savings for each sustainable apparel item",
+    "Add background chill lofi music to product catalogue",
+    "Spin the lucky prize wheel pop-up for free coupons",
+    "free clothes please dm me",
+    "nice website 10/10"
+  ]
+}
