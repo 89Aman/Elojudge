@@ -265,6 +265,15 @@ async def favicon():
     raise HTTPException(status_code=404, detail="Favicon not found")
 
 
+@app.get("/key.svg", include_in_schema=False)
+async def key_icon():
+    """Serve key icon directly for browser requests."""
+    key_file = os.path.join(static_dir, "key.svg")
+    if os.path.exists(key_file):
+        return FileResponse(key_file, media_type="image/svg+xml")
+    raise HTTPException(status_code=404, detail="Key icon not found")
+
+
 @app.get("/", summary="Web Application Entrypoint", include_in_schema=False)
 async def root():
     """Serve the single-page web application frontend."""

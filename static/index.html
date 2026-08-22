@@ -33,7 +33,7 @@
             <span class="pill-tag pill-tag-runs" id="runs-indicator" hidden></span>
             
             <button type="button" class="btn-pill-action" id="open-key-modal-btn" title="Add your own Gemini API Key for unlimited runs">
-              <span class="key-icon">🔑</span>
+              <span class="key-icon"><img src="/static/key.svg" alt="Gemini Key" width="16" height="16"></span>
               <span id="key-btn-text">Gemini Key</span>
               <span class="key-status-dot" id="key-status-dot"></span>
             </button>
@@ -140,7 +140,7 @@
         <!-- Gemini API Key Dialog (BYOK) -->
         <dialog id="api-key-dialog" class="upload-dialog key-dialog">
           <div class="dialog-header">
-            <h3> Gemini API Key (BYOK)</h3>
+            <h3><img src="/static/key.svg" alt="key_svg" width="18" height="18" class="dialog-title-icon"> Gemini API Key (BYOK)</h3>
             <button type="button" id="key-dialog-close" class="dialog-close-btn" aria-label="Close">✕</button>
           </div>
           <div class="key-dialog-body">
