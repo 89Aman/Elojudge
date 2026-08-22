@@ -4,25 +4,16 @@ from app.auth import RateLimiter
 
 
 class TestRateLimiter:
-    def test_anonymous_rate_limit(self):
+    def test_anonymous_blocked_without_login(self):
         limiter = RateLimiter()
         ip = "192.168.1.100"
 
-        # Allowed 2 runs
-        assert limiter.get_remaining(ip, is_google_user=False) == 2
-        allowed, rem, _ = limiter.check_and_record(ip, is_google_user=False)
-        assert allowed is True
-        assert rem == 1
-
-        allowed, rem, _ = limiter.check_and_record(ip, is_google_user=False)
-        assert allowed is True
-        assert rem == 0
-
-        # 3rd run blocked
+        # Anonymous has 0 free runs without login or BYOK key
+        assert limiter.get_remaining(ip, is_google_user=False) == 0
         allowed, rem, msg = limiter.check_and_record(ip, is_google_user=False)
         assert allowed is False
         assert rem == 0
-        assert "Daily limit reached" in msg
+        assert "Sign-in required" in msg
 
     def test_google_user_limit(self):
         limiter = RateLimiter()

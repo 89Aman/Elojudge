@@ -251,7 +251,8 @@ async def auth_status(request: Request, google_id_token: str = ""):
         "authenticated": is_google,
         "user": user_info,
         "remaining_runs": remaining,
-        "max_runs": 5 if is_google else 2,
+        "max_runs": 5 if is_google else 0,
+        "login_required": not is_google and not bool(request.headers.get("x-gemini-api-key")),
     }
 
 
@@ -266,7 +267,8 @@ async def auth_status(request: Request, google_id_token: str = ""):
     responses={
         200: {"description": "Successfully ranked feedback with full match receipts."},
         400: {"description": "Validation error or fewer than 2 distinct items after local cleaning."},
-        429: {"description": "Daily free run limit reached. Prompted to add Bring-Your-Own-Key."},
+        401: {"description": "Authentication required. User must sign in with Google or supply a custom API key."},
+        429: {"description": "Daily free run limit reached (5/5 runs). Prompted to add Bring-Your-Own-Key."},
     },
 )
 async def rank_feedback(request: RankRequest, raw_request: Request):
@@ -288,6 +290,13 @@ async def rank_feedback(request: RankRequest, raw_request: Request):
     identifier = user_info["email"] if user_info else client_ip
     is_google = bool(user_info)
     has_custom_key = bool(request.user_api_key and len(request.user_api_key.strip()) > 10)
+
+    # Enforce mandatory login if no BYOK key
+    if not is_google and not has_custom_key:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Sign-in required: Please sign in with Google (top right) or add your Gemini API Key in Settings (🔑) to run EloJudge.",
+        )
 
     allowed, remaining, limit_msg = rate_limiter.check_and_record(
         identifier=identifier,

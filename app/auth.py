@@ -12,7 +12,7 @@ import httpx
 logger = logging.getLogger(__name__)
 
 # Daily run limits when using server key
-ANONYMOUS_DAILY_LIMIT = 2
+ANONYMOUS_DAILY_LIMIT = 0
 GOOGLE_USER_DAILY_LIMIT = 5
 WINDOW_SECONDS = 86400  # 24 hours
 
@@ -49,11 +49,11 @@ class RateLimiter:
         """Return remaining free server runs for the identifier."""
         if has_custom_key:
             return 9999  # Unlimited with BYOK
+        if not is_google_user:
+            return 0  # Login required
 
-        limit = GOOGLE_USER_DAILY_LIMIT if is_google_user else ANONYMOUS_DAILY_LIMIT
-        storage = self._user_usage if is_google_user else self._ip_usage
-        usage = storage.setdefault(identifier, UserUsage())
-        return max(0, limit - usage.count)
+        usage = self._user_usage.setdefault(identifier, UserUsage())
+        return max(0, GOOGLE_USER_DAILY_LIMIT - usage.count)
 
     def check_and_record(
         self,
@@ -69,20 +69,24 @@ class RateLimiter:
         if has_custom_key:
             return True, 9999, "Custom Gemini API Key active (unlimited runs)."
 
-        limit = GOOGLE_USER_DAILY_LIMIT if is_google_user else ANONYMOUS_DAILY_LIMIT
-        storage = self._user_usage if is_google_user else self._ip_usage
-        usage = storage.setdefault(identifier, UserUsage())
+        if not is_google_user:
+            return (
+                False,
+                0,
+                "Sign-in required: Please sign in with your Google account (top right) or add your Gemini API Key in Settings (🔑) to prioritize feedback.",
+            )
 
-        if usage.count >= limit:
-            user_type = "Google account" if is_google_user else "guest"
+        usage = self._user_usage.setdefault(identifier, UserUsage())
+
+        if usage.count >= GOOGLE_USER_DAILY_LIMIT:
             msg = (
-                f"Daily limit reached ({limit}/{limit} runs for {user_type}). "
+                f"Daily limit reached ({GOOGLE_USER_DAILY_LIMIT}/{GOOGLE_USER_DAILY_LIMIT} runs for your Google account). "
                 "Add your own free Gemini API key in Settings (🔑) for unlimited runs."
             )
             return False, 0, msg
 
         usage.record_run()
-        remaining = max(0, limit - usage.count)
+        remaining = max(0, GOOGLE_USER_DAILY_LIMIT - usage.count)
         return True, remaining, "OK"
 
 

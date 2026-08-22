@@ -512,8 +512,20 @@ async function handleSubmit(event) {
   const items = parseItems();
   if (!validate(context, items)) return;
 
+  // Check login / BYOK requirement
+  const hasKey = Boolean(getUserApiKey());
+  const hasGoogle = Boolean(getGoogleIdToken());
+  if (!hasKey && !hasGoogle) {
+    showWarning(
+      'Sign-in Required',
+      'Please sign in with your Google account (top right) to get 5 free daily runs, or add your Gemini API Key in Settings (🔑) to run EloJudge.'
+    );
+    return;
+  }
+
   submitBtn.disabled = true;
   hideError(formError);
+  hideWarning();
   uploadNote.hidden = true;
   showScreen('processing');
   progressController.start(estimatedRounds(items.length));
@@ -1120,14 +1132,21 @@ async function refreshAuthStatus() {
     return;
   }
 
+  const token = getGoogleIdToken();
+  if (!token) {
+    runsIndicator.textContent = '🔒 Sign in with Google';
+    runsIndicator.classList.remove('exhausted');
+    runsIndicator.title = 'Sign in with Google to get 5 free runs per day, or add your Gemini key.';
+    return;
+  }
+
   try {
-    const token = getGoogleIdToken();
-    const url = token ? `/auth/status?google_id_token=${encodeURIComponent(token)}` : '/auth/status';
+    const url = `/auth/status?google_id_token=${encodeURIComponent(token)}`;
     const res = await fetch(url);
     if (res.ok) {
       const data = await res.json();
-      const rem = data.remaining_runs ?? 2;
-      const max = data.max_runs ?? 2;
+      const rem = data.remaining_runs ?? 5;
+      const max = data.max_runs ?? 5;
       runsIndicator.textContent = `⚡ ${rem}/${max} free runs`;
       runsIndicator.classList.toggle('exhausted', rem === 0);
       runsIndicator.title = `${rem} free server runs remaining today. Add a custom key for unlimited runs.`;
