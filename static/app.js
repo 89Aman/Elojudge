@@ -1244,10 +1244,14 @@ function updateAuthUI() {
   }
 }
 
+const SVG_EYE_ON = '<img src="/static/visibility_24dp_E3E3E3_FILL0_wght400_GRAD0_opsz24.svg" alt="Show key" width="18" height="18">';
+const SVG_EYE_OFF = '<img src="/static/visibility_off_24dp_E3E3E3_FILL0_wght400_GRAD0_opsz24.svg" alt="Hide key" width="18" height="18">';
+
 // Key modal events
 openKeyModalBtn.addEventListener('click', () => {
   customGeminiKeyInput.value = getUserApiKey();
   customGeminiKeyInput.type = 'password';
+  toggleKeyVisibilityBtn.innerHTML = SVG_EYE_ON;
   keyDialog.showModal();
 });
 
@@ -1260,7 +1264,8 @@ keyDialog.addEventListener('click', (e) => {
 toggleKeyVisibilityBtn.addEventListener('click', () => {
   const isPass = customGeminiKeyInput.type === 'password';
   customGeminiKeyInput.type = isPass ? 'text' : 'password';
-  toggleKeyVisibilityBtn.textContent = isPass ? '🔒' : '👁️';
+  toggleKeyVisibilityBtn.innerHTML = isPass ? SVG_EYE_OFF : SVG_EYE_ON;
+  toggleKeyVisibilityBtn.title = isPass ? 'Hide key' : 'Show key';
 });
 
 saveKeyBtn.addEventListener('click', () => {

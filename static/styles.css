@@ -1464,7 +1464,7 @@ kbd {
   font-family: var(--font-display);
   font-size: 1.2rem;
   font-weight: 700;
-  background: linear-gradient(135deg, var(--accent), var(--violet));
+  background: solaccent), var(--violet));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -1829,6 +1829,25 @@ kbd {
   outline: none;
   border-color: var(--accent);
   box-shadow: 0 0 0 2px var(--accent-soft);
+}
+
+#toggle-key-visibility {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 12px;
+  min-width: 42px;
+}
+
+#toggle-key-visibility img {
+  display: block;
+  opacity: 0.85;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+#toggle-key-visibility:hover img {
+  opacity: 1;
+  transform: scale(1.08);
 }
 
 .key-help {
