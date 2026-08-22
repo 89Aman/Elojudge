@@ -12,6 +12,8 @@ import os
 from contextlib import asynccontextmanager
 from typing import Any
 
+from uuid import uuid4
+
 from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse
@@ -21,6 +23,14 @@ from app.auth import rate_limiter, verify_google_id_token
 from app.budget import JobBudget
 from app.cleaner import clean_feedback
 from app.config import settings
+from app.database import (
+    close_db,
+    get_job_by_id,
+    get_recent_jobs,
+    init_db,
+    record_user_usage_in_db,
+    save_ranking_job,
+)
 from app.demo_data import DEMO_FEEDBACK_ITEMS, DEMO_PRODUCT_CONTEXT
 from app.judge import judge_pairs
 from app.observability import ObservabilityTracker
@@ -60,7 +70,9 @@ async def lifespan(app: FastAPI):
     logger.info("⚡ EloJudge backend starting up...")
     logger.info("🤖 Default Model: %s | Strong Model: %s", settings.model, settings.model_strong)
     logger.info("🔑 Server API Key configured: %s", bool(settings.api_key))
+    await init_db()
     yield
+    await close_db()
     logger.info("🛑 EloJudge backend shutting down...")
 
 
@@ -497,14 +509,41 @@ async def rank_feedback(request: RankRequest, raw_request: Request):
         estimated_cost=budget.estimated_cost,
     )
 
+    job_id = f"job_{uuid4().hex[:12]}"
+
+    # Persist usage and job receipt to DigitalOcean PostgreSQL
+    await record_user_usage_in_db(
+        identifier=identifier,
+        is_google=is_google,
+        is_byok=has_custom_key,
+    )
+    await save_ranking_job(
+        job_id=job_id,
+        user_email=user_info.get("email") if user_info else None,
+        user_ip=client_ip,
+        product_context=request.product_context,
+        raw_items_count=len(request.feedback_items),
+        clean_items_count=cleaning_result.summary.clean_items,
+        ranked_items_count=len(ranked_items),
+        summary_dict=summary.model_dump(),
+        rubric_dict=rubric.model_dump(),
+        ranked_items_list=[item.model_dump() for item in ranked_items],
+        lower_priority_list=[item.model_dump() for item in lower_priority],
+        matches_list=[m.model_dump() for m in all_matches],
+        cost_estimate=budget.estimated_cost,
+        is_byok=has_custom_key,
+    )
+
     logger.info(
-        "✅ Pipeline finished: %d ranked items, %d pairwise matches, est_cost=$%.5f",
+        "✅ Pipeline finished [%s]: %d ranked items, %d pairwise matches, est_cost=$%.5f",
+        job_id,
         len(ranked_items),
         len(all_matches),
         budget.estimated_cost,
     )
 
     return RankResponse(
+        job_id=job_id,
         rubric=rubric,
         cleaning_summary=cleaning_result.summary,
         summary=summary,
@@ -513,3 +552,33 @@ async def rank_feedback(request: RankRequest, raw_request: Request):
         matches=all_matches,
         warnings=budget.warnings,
     )
+
+
+# ── History & Backlog Persistence Endpoints ─────────────────────────────────
+
+@app.get(
+    "/history",
+    tags=["Feedback Prioritization"],
+    summary="List Recent Ranking Runs",
+    response_description="Recent prioritized backlog runs stored in DigitalOcean PostgreSQL",
+)
+async def list_history(limit: int = 15, google_id_token: str = ""):
+    """Fetch history of backlog prioritization jobs from PostgreSQL."""
+    user_info = await verify_google_id_token(google_id_token) if google_id_token else None
+    user_email = user_info.get("email") if user_info else None
+    jobs = await get_recent_jobs(limit=min(limit, 50), user_email=user_email)
+    return {"jobs": jobs}
+
+
+@app.get(
+    "/history/{job_id}",
+    tags=["Feedback Prioritization"],
+    summary="Fetch Historical Ranking Backlog",
+    response_description="Complete snapshot of a historical prioritization job",
+)
+async def get_history_job(job_id: str):
+    """Retrieve full ranking run receipt by job ID from PostgreSQL."""
+    job = await get_job_by_id(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail=f"Job '{job_id}' not found in database")
+    return job

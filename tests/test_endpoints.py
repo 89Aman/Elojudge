@@ -40,3 +40,16 @@ def test_auth_status_endpoint():
     assert "google_client_id" in data
     assert "374080008653" in data["google_client_id"]
     assert data["authenticated"] is False
+
+
+def test_history_list():
+    response = client.get("/history")
+    assert response.status_code == 200
+    data = response.json()
+    assert "jobs" in data
+    assert isinstance(data["jobs"], list)
+
+
+def test_history_not_found():
+    response = client.get("/history/job_nonexistent_999999")
+    assert response.status_code == 404

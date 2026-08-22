@@ -236,6 +236,7 @@ class PipelineSummary(BaseModel):
 class RankResponse(BaseModel):
     """Complete response from POST /rank."""
 
+    job_id: Optional[str] = None
     rubric: Rubric
     cleaning_summary: CleaningSummary
     summary: PipelineSummary

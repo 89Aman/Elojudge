@@ -243,6 +243,10 @@ const CONTEXT_HEADERS = [
 ];
 
 function handleDatasetFile(file) {
+  if (!isUserAuthenticated()) {
+    promptAuth('import datasets');
+    return;
+  }
   hideError(itemsError);
   uploadNote.hidden = true;
   hideWarning();
@@ -508,20 +512,15 @@ const progressController = {
 async function handleSubmit(event) {
   event.preventDefault();
 
+  // Check login / BYOK requirement
+  if (!isUserAuthenticated()) {
+    promptAuth('prioritize feedback');
+    return;
+  }
+
   const context = contextEl.value.trim();
   const items = parseItems();
   if (!validate(context, items)) return;
-
-  // Check login / BYOK requirement
-  const hasKey = Boolean(getUserApiKey());
-  const hasGoogle = Boolean(getGoogleIdToken());
-  if (!hasKey && !hasGoogle) {
-    showWarning(
-      'Sign-in Required',
-      'Please sign in with your Google account (top right) to get 5 free daily runs, or add your Gemini API Key in Settings (🔑) to run EloJudge.'
-    );
-    return;
-  }
 
   submitBtn.disabled = true;
   hideError(formError);
@@ -997,7 +996,13 @@ formEl.addEventListener('keydown', e => {
   }
 });
 
-uploadCsvBtn.addEventListener('click', () => uploadDialog.showModal());
+uploadCsvBtn.addEventListener('click', () => {
+  if (!isUserAuthenticated()) {
+    promptAuth('import datasets');
+    return;
+  }
+  uploadDialog.showModal();
+});
 
 // Dialog close
 dialogCloseBtn.addEventListener('click', () => { hideUploadProgress(); uploadDialog.close(); });
@@ -1020,6 +1025,10 @@ dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-ove
 dropZone.addEventListener('drop', (e) => {
   e.preventDefault();
   dropZone.classList.remove('drag-over');
+  if (!isUserAuthenticated()) {
+    promptAuth('import datasets');
+    return;
+  }
   const file = e.dataTransfer.files && e.dataTransfer.files[0];
   if (file) handleDatasetFile(file);
 });
@@ -1083,6 +1092,22 @@ const STORAGE_KEY_API_KEY = 'elojudge_gemini_key';
 const STORAGE_KEY_GOOGLE_TOKEN = 'elojudge_google_token';
 const STORAGE_KEY_GOOGLE_USER = 'elojudge_google_user';
 
+function isUserAuthenticated() {
+  const customKey = getUserApiKey();
+  const token = getGoogleIdToken();
+  return Boolean(customKey || token);
+}
+
+function promptAuth(actionName = 'run EloJudge') {
+  showToast(`🔒 Sign in with Google or enter Gemini Key (BYOK) to ${actionName}.`, 'warning');
+  showWarning(
+    'Sign-in Required',
+    `Please sign in with your Google account (top right) to get 5 free daily runs, or add your Gemini API Key in Settings (🔑) to ${actionName}.`
+  );
+  openKeyModalBtn.classList.add('pulse-highlight');
+  setTimeout(() => openKeyModalBtn.classList.remove('pulse-highlight'), 2200);
+}
+
 function getUserApiKey() {
   return (localStorage.getItem(STORAGE_KEY_API_KEY) || '').trim();
 }
@@ -1126,6 +1151,7 @@ function clearGoogleAuth() {
 async function refreshAuthStatus() {
   const customKey = getUserApiKey();
   if (customKey) {
+    runsIndicator.hidden = false;
     runsIndicator.textContent = '⚡ Unlimited (BYOK)';
     runsIndicator.classList.remove('exhausted');
     runsIndicator.title = 'Custom Gemini API Key active — unlimited runs';
@@ -1134,9 +1160,8 @@ async function refreshAuthStatus() {
 
   const token = getGoogleIdToken();
   if (!token) {
-    runsIndicator.textContent = '🔒 Sign in with Google';
-    runsIndicator.classList.remove('exhausted');
-    runsIndicator.title = 'Sign in with Google to get 5 free runs per day, or add your Gemini key.';
+    runsIndicator.hidden = true;
+    runsIndicator.textContent = '';
   }
 
   try {
@@ -1150,6 +1175,7 @@ async function refreshAuthStatus() {
       if (token) {
         const rem = data.remaining_runs ?? 5;
         const max = data.max_runs ?? 5;
+        runsIndicator.hidden = false;
         runsIndicator.textContent = `⚡ ${rem}/${max} free runs`;
         runsIndicator.classList.toggle('exhausted', rem === 0);
         runsIndicator.title = `${rem} free server runs remaining today. Add a custom key for unlimited runs.`;
@@ -1158,6 +1184,8 @@ async function refreshAuthStatus() {
           localStorage.setItem(STORAGE_KEY_GOOGLE_USER, JSON.stringify(data.user));
           updateAuthUI();
         }
+      } else {
+        runsIndicator.hidden = true;
       }
     }
   } catch (err) {
@@ -1166,12 +1194,15 @@ async function refreshAuthStatus() {
 }
 
 function updateAuthUI() {
+  const isAuthed = isUserAuthenticated();
+
   // 1. Key button state
   const customKey = getUserApiKey();
   if (customKey) {
     openKeyModalBtn.classList.add('has-key');
     keyBtnText.textContent = 'Custom Key';
     openKeyModalBtn.title = 'Custom Gemini API Key active (Click to manage)';
+    runsIndicator.hidden = false;
     runsIndicator.textContent = '⚡ Unlimited (BYOK)';
     runsIndicator.classList.remove('exhausted');
     clearKeyBtn.hidden = false;
@@ -1180,6 +1211,10 @@ function updateAuthUI() {
     keyBtnText.textContent = 'Gemini Key';
     openKeyModalBtn.title = 'Add your own Gemini API Key for unlimited runs';
     clearKeyBtn.hidden = true;
+    if (!getGoogleIdToken()) {
+      runsIndicator.hidden = true;
+      runsIndicator.textContent = '';
+    }
   }
 
   // 2. Google user chip
@@ -1197,6 +1232,15 @@ function updateAuthUI() {
   } else {
     userProfileChip.hidden = true;
     gSignInBtn.hidden = false;
+  }
+
+  // 3. Action button title hints
+  if (!isAuthed) {
+    submitBtn.title = 'Sign in with Google or add Gemini API Key (BYOK) to rank feedback';
+    uploadCsvBtn.title = 'Sign in with Google or add Gemini API Key (BYOK) to import datasets';
+  } else {
+    submitBtn.title = 'Prioritize feedback with Swiss tournament';
+    uploadCsvBtn.title = 'Import feedback dataset from CSV, JSON, or text';
   }
 }
 

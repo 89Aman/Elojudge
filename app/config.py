@@ -24,6 +24,9 @@ class Settings:
     )
     google_client_secret: str = os.getenv("GOOGLE_CLIENT_SECRET", "")
 
+    # Storage (DigitalOcean PostgreSQL)
+    database_url: str = os.getenv("DATABASE_URL", "")
+
     # Limits
     max_raw_items: int = int(os.getenv("MAX_RAW_ITEMS", "100"))
     max_clean_clusters: int = int(os.getenv("MAX_CLEAN_CLUSTERS", "30"))

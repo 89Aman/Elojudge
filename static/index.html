@@ -30,7 +30,7 @@
 
           <!-- Auth & Key Bar -->
           <div class="header-auth-bar">
-            <span class="pill-tag pill-tag-runs" id="runs-indicator" title="Daily free AI ranking runs">⚡ 2 free runs</span>
+            <span class="pill-tag pill-tag-runs" id="runs-indicator" hidden></span>
             
             <button type="button" class="btn-pill-action" id="open-key-modal-btn" title="Add your own Gemini API Key for unlimited runs">
               <span class="key-icon">🔑</span>
@@ -140,7 +140,7 @@
         <!-- Gemini API Key Dialog (BYOK) -->
         <dialog id="api-key-dialog" class="upload-dialog key-dialog">
           <div class="dialog-header">
-            <h3>🔑 Gemini API Key (BYOK)</h3>
+            <h3> Gemini API Key (BYOK)</h3>
             <button type="button" id="key-dialog-close" class="dialog-close-btn" aria-label="Close">✕</button>
           </div>
           <div class="key-dialog-body">
